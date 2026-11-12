@@ -7,7 +7,7 @@ import { defaults } from './defaults.mjs';
 const root = path.dirname(fileURLToPath(import.meta.url));
 const port = Number(process.env.PORT || 3131);
 const dir = process.env.DATA_DIR || path.join(root, 'data');
-const publicHosts = new Set(['hackathlone.comain.ie', ...(process.env.PUBLIC_HOSTS || '').split(',').map(value => value.trim().toLowerCase()).filter(Boolean)]);
+const publicHosts = new Set([...(process.env.PUBLIC_HOSTS || '').split(',').map(value => value.trim().toLowerCase()).filter(Boolean)]);
 const isAllowedHost = host => {
   const normalized = String(host || '').toLowerCase();
   return ['127.0.0.1', 'localhost', `127.0.0.1:${port}`, `localhost:${port}`].includes(normalized) || publicHosts.has(normalized);
