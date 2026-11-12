@@ -31,7 +31,11 @@ test('includes the complete official local event schedule',async()=>{
   assert.equal(schedule.length,34);
   assert.deepEqual([...new Set(schedule.map(item=>item.day))],['13 NOV','14 NOV','15 NOV']);
   assert.equal(schedule[0].time,'16:00');
-  assert.equal(schedule.at(-1).title,'Venue close-down');
+  assert.equal(schedule.at(-1).title,'Global Submissions Close');
+});
+test('serves every partner logo in the starter data',async()=>{
+  const {partners}=await get();
+  for(const partner of partners.filter(item=>item.logo))assert.equal((await fetch(base+partner.logo)).status,200,partner.logo);
 });
 test('partial changes preserve other controls and clamp invalid settings',async()=>{
   const original=await get();await put({event:{...original.event,title:'Integration Test'}});
