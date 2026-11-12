@@ -2,6 +2,10 @@
 
 A local production control panel and transparent OBS graphics package for HackAthlone 2026. It runs on Node.js 22+ with no third-party runtime dependencies and no build step.
 
+## Streaming laptop
+
+Setting up the laptop that streams to YouTube, with OBS and these graphics: see [STREAMING.md](STREAMING.md).
+
 ## Start
 
 Double-click `start.cmd`, or run this in the project folder:
