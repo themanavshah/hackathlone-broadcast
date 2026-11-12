@@ -4,10 +4,12 @@
 //   node obs/setup-obs.mjs --install    also install them into this computer's OBS settings (close OBS first)
 //
 // Options:
-//   --encoder x264|nvenc|qsv|amd|apple_h264   video encoder (default x264; use a hardware one if the laptop has it)
+//   --encoder x264|nvenc|qsv|amd|apple_h264   video encoder (default: apple_h264 on a Mac, nvenc on Windows
+//                                             with an NVIDIA card, otherwise x264)|nvenc|qsv|amd|apple_h264   video encoder (default x264; use a hardware one if the laptop has it)
 //   --recordings <folder>                     where OBS saves recordings (default: Videos, or Movies on a Mac)
 //   --stand-in <image>                        put a still image under the graphics, to test without a camera
 //   --port <number>                           broadcast studio port (default 3131)
+import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { access, copyFile, mkdir, readFile, writeFile } from 'node:fs/promises';
 import os from 'node:os';
@@ -19,7 +21,13 @@ const args = process.argv.slice(2);
 const option = (name, fallback) => { const i = args.indexOf(name); return i >= 0 && args[i + 1] ? args[i + 1] : fallback; };
 const install = args.includes('--install');
 const port = Number(option('--port', process.env.PORT || 3131));
-const encoder = option('--encoder', 'x264');
+// No --encoder: the Mac's own encoder, NVIDIA's on a Windows laptop that has one, otherwise x264.
+const autoEncoder = () => {
+  if (process.platform === 'darwin') return 'apple_h264';
+  if (process.platform === 'win32') { try { execFileSync('nvidia-smi', ['-L'], { stdio: 'ignore' }); return 'nvenc'; } catch {} }
+  return 'x264';
+};
+const encoder = option('--encoder', '') || autoEncoder();
 const standIn = option('--stand-in', '');
 const recordings = option('--recordings', path.join(os.homedir(), process.platform === 'darwin' ? 'Movies' : 'Videos'));
 const NAME = 'HackAthlone 2026', SLUG = 'HackAthlone_2026';
@@ -80,7 +88,7 @@ const collection = {
 };
 
 // YouTube settings: 1080p at 30 fps, 6000 kbps, keyframes every 2 s (Simple mode default), RTMPS on port 443.
-const profile = (recordingsFolder) => `[General]
+const profile = (recordingsFolder, enc = encoder) => `[General]
 Name=${NAME}
 
 [Video]
@@ -109,8 +117,8 @@ ABitrate=160
 UseAdvanced=false
 Preset=veryfast
 RecQuality=Stream
-StreamEncoder=${encoder}
-RecEncoder=${encoder}
+StreamEncoder=${enc}
+RecEncoder=${enc}
 StreamAudioEncoder=aac
 RecAudioEncoder=aac
 `;
@@ -120,7 +128,7 @@ const service = (key = '') => JSON.stringify({ settings: { bwtest: false, key, s
 const portable = { ...collection, sources: [scene('Camera', [graphics]), slides, graphics] };
 await writeFile(path.join(here, `${SLUG}.json`), JSON.stringify(portable, null, 4) + '\n');
 await mkdir(path.join(here, SLUG), { recursive: true });
-await writeFile(path.join(here, SLUG, 'basic.ini'), profile('').replace(/^FilePath=.*\n/m, ''));
+await writeFile(path.join(here, SLUG, 'basic.ini'), profile('', 'x264').replace(/^FilePath=.*\n/m, ''));
 await writeFile(path.join(here, SLUG, 'service.json'), service() + '\n');
 console.log(`Wrote obs/${SLUG}.json (scene collection) and obs/${SLUG}/ (profile).`);
 
@@ -141,6 +149,6 @@ if (install) {
   let key = '';
   try { key = JSON.parse(await readFile(path.join(profileDir, 'service.json'), 'utf8')).settings?.key || ''; } catch {}
   await writeFile(path.join(profileDir, 'service.json'), service(key) + '\n');
-  console.log(`Installed into ${root}: scene collection "${NAME}" and profile "${NAME}"${key ? ' (stream key kept)' : ''}.`);
+  console.log(`Installed into ${root}: scene collection "${NAME}" and profile "${NAME}" (encoder ${encoder})${key ? ' (stream key kept)' : ''}.`);
   console.log(`In OBS pick Profile > ${NAME} and Scene Collection > ${NAME}.`);
 }
