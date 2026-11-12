@@ -30,6 +30,7 @@ function render(s) {
   $('lower').classList.toggle('team-lower',s.lowerPosition==='center');
   text('lower-eyebrow',s.lowerPosition==='center'?'TEAM ON STAGE':'ON STAGE');
   const partner = on('partners'), ticker = on('ticker');
+  canvas.classList.toggle('bottom-bars',partner||ticker);
   canvas.style.setProperty('--bottom-offset',((partner?116:0)+(ticker?60:0))+'px');canvas.style.setProperty('--ticker-bottom',(partner?116:0)+'px');
   for(const key of Object.keys(s.layers))visibility(key,on(key));
   visibility('slate',s.scene !== 'live' && (!only || only==='slate'));
@@ -39,7 +40,7 @@ function render(s) {
   text('bug-title',s.event.title);text('bug-sub',s.event.subtitle);
   text('guest-name',s.guest.name);text('guest-meta',[s.guest.role,s.guest.organization].filter(Boolean).join(' / '));
   text('timer-label',s.timer.label);text('slate-event',s.event.title+' / '+s.event.subtitle);
-  text('slate-title',({starting:'The mission starts soon.',break:'A short intermission.',ending:'One weekend. Infinite possibilities.'})[s.scene] || '');
+  text('slate-title',({starting:'Starting soon',break:'Short break',ending:'Thanks for watching'})[s.scene] || '');
   text('slate-venue',s.event.venue);text('slate-dates',s.event.dates);text('ticker-label',s.announcement.label);
   const t = s.announcement.text;
   if(tickerKey!==t){
@@ -54,7 +55,7 @@ function render(s) {
     $('partner-track').innerHTML=`<div class="partner-group">${content}</div>`.repeat(2);partnerKey=p;
   }
   const a=JSON.stringify([s.schedule,s.activeSchedule]);
-  if(scheduleKey!==a){$('agenda-items').innerHTML=s.schedule.slice(s.activeSchedule,s.activeSchedule+3).map(p=>`<div class="agenda-item"><time>${esc(p.time)}</time><div><b>${esc(p.title)}</b><span>${esc(p.day)} · ${esc(p.detail)}</span></div></div>`).join('');scheduleKey=a;}
+  if(scheduleKey!==a){$('agenda-items').innerHTML=s.schedule.slice(s.activeSchedule,s.activeSchedule+3).map(p=>`<div class="agenda-item"><time>${esc(p.time)}</time><div><b>${esc(p.title)}</b><span>${esc(p.day)}${p.detail?' ∙ '+esc(p.detail):''}</span></div></div>`).join('');scheduleKey=a;}
   time();
 }
 function resize(){const scale=Math.min(innerWidth/1920,innerHeight/1080);$('canvas').style.transform=`scale(${scale})`;}
