@@ -16,7 +16,7 @@ async function stop(){const done=new Promise(resolve=>processHandle.once('exit',
 before(async()=>{dir=await mkdtemp(path.join(tmpdir(),'hackathlone-test-'));await launch();});
 after(async()=>{if(processHandle?.exitCode===null)await stop();await rm(dir,{recursive:true,force:true});});
 test('serves dashboard, transparent output and bundled brand assets',async()=>{
-  for(const url of ['/','/overlay','/overlay?layer=lower','/studio.js','/overlay.js','/studio.css','/overlay.css','/assets/logo.svg','/assets/logo-light.svg','/assets/icon.svg','/assets/icon-light.svg','/assets/spaceapps.svg','/assets/spaceapps-light.svg','/assets/partners/angola-ggpen.png','/assets/partners/uk-space-agency.png','/assets/font.woff2','/assets/overpass.woff2'])assert.equal((await fetch(base+url)).status,200,url);
+  for(const url of ['/','/overlay','/overlay?layer=lower','/studio.js','/overlay.js','/slate-time.js','/studio.css','/overlay.css','/assets/logo.svg','/assets/logo-light.svg','/assets/icon.svg','/assets/icon-light.svg','/assets/spaceapps.svg','/assets/spaceapps-light.svg','/assets/partners/angola-ggpen.png','/assets/partners/uk-space-agency.png','/assets/font.woff2','/assets/overpass.woff2'])assert.equal((await fetch(base+url)).status,200,url);
   assert.equal((await fetch(base+'/unknown')).status,404);
 });
 test('includes the complete NASA Space Apps agency partner roster',async()=>{

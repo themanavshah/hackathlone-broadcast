@@ -71,7 +71,7 @@ The numbers in the table match the control panel picture below.
 
 | When | Control panel | OBS |
 | --- | --- | --- |
-| 15 minutes before | **Starting soon** (2) | **Start Streaming** |
+| 15 minutes before | **Starting soon** (2), then type 15 in Countdown and **Start** (6) | **Start Streaming** |
 | The start | **Live** (1) | Camera |
 | Someone speaks | Type their name and role, then **Take live** (5). It hides itself after 12 seconds. | Camera |
 | Slides | | Slides |

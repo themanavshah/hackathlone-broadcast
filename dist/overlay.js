@@ -1,3 +1,4 @@
+import { showsSlateTime } from './slate-time.js';
 const $ = id => document.getElementById(id);
 let state, partnerKey, scheduleKey, tickerKey, sceneKey;
 const params = new URLSearchParams(location.search);
@@ -10,7 +11,7 @@ function time() {
   if(!state)return;
   const seconds = Math.max(0,Math.ceil(state.timer.endAt ? (state.timer.endAt-Date.now())/1000 : state.timer.remaining));
   const output = (seconds>=3600 ? `${Math.floor(seconds/3600).toString().padStart(2,'0')}:` : '') + `${Math.floor(seconds/60)%60}`.padStart(2,'0')+':'+`${seconds%60}`.padStart(2,'0');
-  text('timer-value',output); text('slate-time',state.scene === 'break' ? output : '');
+  text('timer-value',output); text('slate-time',showsSlateTime(state) ? output : '');
   $('timer').classList.toggle('expired',seconds===0);
   if(state.lowerHideAt && Date.now()>=state.lowerHideAt)visibility('lower',false);
 }

@@ -18,7 +18,7 @@ function update(change,message){
 }
 function fill(form,data){for(const [key,value] of Object.entries(data)){const el=form.elements.namedItem(key);if(el&&document.activeElement!==el){if(el.type==='checkbox')el.checked=value;else el.value=value;}}}
 function draft(){const f=$('guest-form');$('draft-name').textContent=f.elements.name.value || 'Guest name';$('draft-meta').textContent=[f.elements.role.value,f.elements.organization.value].filter(Boolean).join(' / ');}
-const tabInfo={studio:['Ready for <span>broadcast.</span>','Names, moments and people. Control exactly what your audience sees.'],guests:['People of the <span>mission.</span>','Prepare guest cards ahead of time, then put the right person on screen at the right moment.'],teams:['Teams on <span>stage.</span>','Choose a team to show its name in the bottom-centre on-stage graphic.'],schedule:['The flight <span>plan.</span>','Event timing, upcoming sessions and important deadlines.'],partners:['Built <span>together.</span>','Organisers, partners and communities making the mission possible.'],settings:['Your broadcast <span>system.</span>','OBS sources, brand graphics and production backups.']};
+const tabInfo={studio:['Ready for <span>broadcast</span>','Names, moments and people. Control exactly what your audience sees.'],guests:['People of the <span>mission</span>','Prepare guest cards ahead of time, then put the right person on screen at the right moment.'],teams:['Teams on <span>stage</span>','Choose a team to show its name in the bottom-centre on-stage graphic.'],schedule:['The flight <span>plan</span>','Event timing, upcoming sessions and important deadlines.'],partners:['Built <span>together</span>','Organisers, partners and communities making the mission possible.'],settings:['Your broadcast <span>system</span>','OBS sources, brand graphics and production backups.']};
 function tab(name){document.querySelectorAll('.tab').forEach(el=>el.classList.toggle('active',el.id==='tab-'+name));document.querySelectorAll('.nav').forEach(el=>el.classList.toggle('active',el.dataset.tab===name));$('page-title').innerHTML=tabInfo[name][0];$('page-description').textContent=tabInfo[name][1];$('breadcrumb').textContent=document.querySelector(`[data-tab="${name}"]`).textContent.trim();}
 document.querySelectorAll('[data-tab]').forEach(el=>el.onclick=()=>tab(el.dataset.tab));
 let libraryKey='';
@@ -57,7 +57,7 @@ document.addEventListener('click',e=>{
   const b=e.target.closest('button');if(!b||!state)return;
   if(b.dataset.layer)update(s=>({layers:{...s.layers,[b.dataset.layer]:!s.layers[b.dataset.layer]},...(b.dataset.layer==='lower'?{lowerHideAt:null}:{})})).catch(()=>{});
   if(b.dataset.scene)update(s=>{
-    const timerLayer = ['starting','break','ending'].includes(b.dataset.scene) ? {timer:b.dataset.scene==='break'} : {};
+    const timerLayer = ['starting','break','ending'].includes(b.dataset.scene) ? {timer:b.dataset.scene==='break'} : (s.scene !== 'live' ? {timer:false} : {});
     return {scene:b.dataset.scene,layers:{...s.layers,...timerLayer}};
   },'Scene switched').catch(()=>{});
   if(b.dataset.loadGuest!==undefined){fill($('guest-form'),state.guests[+b.dataset.loadGuest]);draftDirty=true;draft();tab('studio');toast('Guest prepared. Press “Take live” when ready.');}
