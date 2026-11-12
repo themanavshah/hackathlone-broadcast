@@ -1,10 +1,8 @@
 # HackAthlone Broadcast Studio
 
+**Setting up the streaming laptop: [STREAMING.md](STREAMING.md)**
+
 A local production control panel and transparent OBS graphics package for HackAthlone 2026. It runs on Node.js 22+ with no third-party runtime dependencies and no build step.
-
-## Streaming laptop
-
-Setting up the laptop that streams to YouTube, with OBS and these graphics: see [STREAMING.md](STREAMING.md).
 
 ## Start
 
@@ -22,8 +20,8 @@ Set the `PORT` environment variable to use another port. Generated OBS URLs auto
 
 ## Operator guide
 
-- **Guest lower third:** enter a name, role and organisation, then press **Take live**. Draft changes stay local until that button is pressed. Auto-hide can be manual or 8–30 seconds.
-- **Scenes:** switch between transparent live graphics, starting soon, intermission and closing slates. Full-screen slates hide the corner mark, lower third, agenda and compact timer.
+- **Guest lower third:** enter a name, role and organization, then press **Take live**. Draft changes stay local until that button is pressed. Auto-hide can be manual or 8 to 30 seconds.
+- **Scenes:** switch between transparent live graphics, starting soon, break and closing slates. Full-screen slates hide the corner mark, lower third, agenda and compact timer.
 - **Countdown:** enter a duration in minutes and press **Start**. Pause/Resume preserves the remaining time; Reset restores the original duration.
 - **Partner strip:** upload PNG, JPEG or WebP logos up to 1 MB and reorder them with the arrow control. The sequence is duplicated for a seamless broadcast loop.
 - **Agenda:** select the current item and take the agenda live. The overlay shows that item plus the next two.
@@ -58,10 +56,13 @@ Starter guest roles come from the [HackAthlone team page](https://hackathlone.co
 
 ## Structure and verification
 
-- `dist/` — control panel, overlays and bundled brand assets
-- `server.mjs` — HTTP server, Server-Sent Events and persistence
-- `defaults.mjs` — starter event data
-- `data/state.json` — automatically persisted local state; do not commit personal data
+- `dist/`: control panel, overlays and bundled brand assets
+- `server.mjs`: HTTP server, Server-Sent Events and persistence
+- `defaults.mjs`: starter event data
+- `data/state.json`: automatically persisted local state; do not commit personal data
+- `obs/`: the OBS scene collection, profile and setup script
+- `start.cmd`, `start.command`, `setup-obs.cmd`, `setup-obs.command`: double-click helpers for Windows and Mac
+- `docs/images/`: pictures for the setup guide
 
 Run the integration suite with:
 
