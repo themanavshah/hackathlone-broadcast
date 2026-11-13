@@ -1,6 +1,9 @@
 import { showsSlateTime } from './slate-time.js';
+import { ROWS, towerWindow, rowKeys, status } from './order.js';
 const $ = id => document.getElementById(id);
-let state, partnerKey, scheduleKey, tickerKey, sceneKey;
+let state, partnerKey, scheduleKey, tickerKey, sceneKey, orderKey;
+const orderRows = new Map(), ROW = 46;
+const CHECK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 const params = new URLSearchParams(location.search);
 const only = params.get('layer');
 if(params.has('capture')) document.documentElement.classList.add('capture');
@@ -14,6 +17,33 @@ function time() {
   text('timer-value',output); text('slate-time',showsSlateTime(state) ? output : '');
   $('timer').classList.toggle('expired',seconds===0);
   if(state.lowerHideAt && Date.now()>=state.lowerHideAt)visibility('lower',false);
+}
+// The presentation order. Rows are keyed by team, so a moved team slides to its new place.
+function renderOrder(s) {
+  const teams = s.teams, current = s.currentTeam ?? null, key = JSON.stringify([teams, current]);
+  if (key === orderKey) return;
+  orderKey = key;
+  const { start } = towerWindow(teams.length, current), box = $('order-rows'), keys = rowKeys(teams);
+  text('order-count', current === null ? `${teams.length} TEAMS` : `${current + 1} OF ${teams.length}`);
+  box.style.height = `${Math.min(ROWS, teams.length) * ROW}px`;
+  keys.forEach((rowKey, i) => {
+    let row = orderRows.get(rowKey);
+    if (!row) {
+      row = document.createElement('div');
+      row.className = 'order-row fresh';
+      row.innerHTML = '<span class="pos"></span><span class="name"></span><span class="mark"></span>';
+      box.appendChild(row); orderRows.set(rowKey, row);
+    }
+    const st = status(i, current);
+    row.classList.remove('done', 'now', 'next', 'waiting'); row.classList.add(st);
+    row.querySelector('.pos').textContent = String(i + 1).padStart(2, '0');
+    row.querySelector('.name').textContent = teams[i];
+    row.querySelector('.mark').innerHTML = st === 'done' ? CHECK : st === 'now' ? 'ON STAGE' : st === 'next' ? 'NEXT' : '';
+    row.style.transform = `translateY(${(i - start) * ROW}px)`;
+  });
+  for (const [rowKey, row] of orderRows) if (!keys.includes(rowKey)) { row.remove(); orderRows.delete(rowKey); }
+  // New rows appear in place; only rows that already existed slide.
+  requestAnimationFrame(() => requestAnimationFrame(() => box.querySelectorAll('.fresh').forEach((row) => row.classList.remove('fresh'))));
 }
 function render(s) {
   state = s;
@@ -35,7 +65,7 @@ function render(s) {
   canvas.style.setProperty('--bottom-offset',((partner?116:0)+(ticker?60:0))+'px');canvas.style.setProperty('--ticker-bottom',(partner?116:0)+'px');
   for(const key of Object.keys(s.layers))visibility(key,on(key));
   visibility('slate',s.scene !== 'live' && (!only || only==='slate'));
-  if(s.scene !== 'live')for(const key of ['bug','lower','agenda'])visibility(key,false);
+  if(s.scene !== 'live')for(const key of ['bug','lower','agenda','order'])visibility(key,false);
   if(s.scene !== 'live')visibility('timer',false);
   visibility('guides',s.settings.guides && new URLSearchParams(location.search).has('preview'));
   text('bug-title',s.event.title);text('bug-sub',s.event.subtitle);
@@ -57,6 +87,7 @@ function render(s) {
   }
   const a=JSON.stringify([s.schedule,s.activeSchedule]);
   if(scheduleKey!==a){$('agenda-items').innerHTML=s.schedule.slice(s.activeSchedule,s.activeSchedule+3).map(p=>`<div class="agenda-item"><time>${esc(p.time)}</time><div><b>${esc(p.title)}</b><span>${esc(p.day)}${p.detail?' ∙ '+esc(p.detail):''}</span></div></div>`).join('');scheduleKey=a;}
+  renderOrder(s);
   time();
 }
 function resize(){const scale=Math.min(innerWidth/1920,innerHeight/1080);$('canvas').style.transform=`scale(${scale})`;}

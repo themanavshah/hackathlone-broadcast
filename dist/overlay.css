@@ -49,3 +49,23 @@
 
 /* The partner strip and ticker cover the slate footer, so hide the footer while either is on. */
 #canvas.bottom-bars .slate:before,#canvas.bottom-bars .slate-dates,#canvas.bottom-bars .slate-site{display:none}
+/* Presentation order: the teams in presenting order down the left, like a race timing tower. */
+.order{position:absolute;left:var(--safe);top:calc(var(--safe) + 130px);width:493px;background:#fff;border:2px solid var(--electric);box-shadow:0 18px 46px #00307a26;overflow:hidden;transition:opacity .38s ease,transform .55s cubic-bezier(.22,1,.36,1),visibility .55s}
+.order.hidden{transform:translateX(-36px)}
+.order-head{height:54px;padding:0 20px 0 18px;display:flex;align-items:center;justify-content:space-between;background:var(--electric);color:#fff;font:800 15px Overpass,sans-serif;letter-spacing:.16em}
+.order-head span{color:var(--neon);letter-spacing:.1em;font-variant-numeric:tabular-nums}
+.order-rows{position:relative;overflow:hidden}
+.order-row{position:absolute;left:0;right:0;top:0;height:46px;display:flex;align-items:center;border-top:1px solid var(--line);background:#fff;transition:transform .7s cubic-bezier(.22,1,.36,1),background-color .35s}
+.order-row.fresh{transition:none}
+.order-row .pos{align-self:stretch;width:58px;flex:none;display:grid;place-items:center;background:#eaf1fb;color:var(--electric);font:800 19px Overpass,sans-serif;font-variant-numeric:tabular-nums;transition:background-color .35s,color .35s}
+.order-row .name{flex:1;min-width:0;padding:0 14px 0 16px;color:#111;font:750 21px/1.1 Overpass,sans-serif;letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:color .35s}
+.order-row .mark{flex:none;padding-right:16px;font:800 12px Overpass,sans-serif;letter-spacing:.16em}
+.order-row .mark svg{display:block;width:22px;height:22px;color:var(--forest)}
+.order-row.done{background:#f6f8fc}
+.order-row.done .pos{background:#eef1f6;color:#9aa5b8}
+.order-row.done .name{color:#8a93a6}
+.order-row.now{background:var(--electric)}
+.order-row.now .pos{background:var(--neon);color:#111}
+.order-row.now .name{color:#fff}
+.order-row.now .mark{color:var(--neon)}
+.order-row.next .mark{color:var(--rocket)}

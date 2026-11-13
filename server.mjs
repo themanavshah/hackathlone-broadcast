@@ -35,6 +35,7 @@ export function normalize(input) {
   if (s.guest) d.guest = person(s.guest);
   if (Array.isArray(s.guests)) d.guests = s.guests.slice(0, 100).map(person);
   if (Array.isArray(s.teams)) d.teams = s.teams.slice(0, 100).map(team => str(team, '', 120));
+  d.currentTeam = Number.isInteger(s.currentTeam) && s.currentTeam >= 0 && s.currentTeam < d.teams.length ? s.currentTeam : null;
   if (s.lowerPosition === 'left' || s.lowerPosition === 'center') d.lowerPosition = s.lowerPosition;
   for (const key of Object.keys(d.layers)) if (typeof s.layers?.[key] === 'boolean') d.layers[key] = s.layers[key];
   if (['live','starting','break','ending'].includes(s.scene)) d.scene = s.scene;

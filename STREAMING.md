@@ -75,7 +75,7 @@ The numbers in the table match the control panel picture below.
 | The start | **Live** (1) | Camera |
 | Someone speaks | Type their name and role, then **Take live** (5). It hides itself after 12 seconds. | Camera |
 | Slides | | Slides |
-| A team presents | **Teams** (8), then **Bring on stage** (9) | Slides |
+| A team presents | **Teams**, then **Next team**. It puts the next team on stage and shows its name. | Slides |
 | A break | **Break** (3). Type the minutes in Countdown, then **Start** (6) | |
 | The end | **Closing** (4), then wait 30 seconds | **Stop Streaming** |
 
@@ -83,15 +83,16 @@ The numbers in the table match the control panel picture below.
 
 ![The control panel, with the numbers](docs/images/control-panel.png)
 
-![The Teams tab](docs/images/teams.png)
-
 **What viewers see:**
 
 ![Starting soon, a speaker, a team on stage and a break](docs/images/on-screen.png)
 
 **Sunday:**
 - **Times:** sessions start at 11:30, 13:15 and 15:00. There are 15 minute breaks at 13:00 and 14:45. The judges deliberate from 16:30, and the awards start at 17:30.
-- **The team list:** Manav sends the final list before 11:30. Load it in **Settings & OBS > Import JSON**.
+- **The team list:** Manav sends the final list before 11:30. In **Teams**, open **Change the list**, paste the teams one per line in presenting order, then click **Save the list**.
+- **The presentation order:** **Show the order on screen** puts the list down the left of the stream. **Next team** moves the highlight to the next team and shows its name. If you press it too early, click **Back**. **Undo** takes back any change.
+
+![The presentation order: what viewers see and what the controller presses](docs/images/presentation-order.png)
 
 ## If something goes wrong
 

@@ -16,7 +16,7 @@ async function stop(){const done=new Promise(resolve=>processHandle.once('exit',
 before(async()=>{dir=await mkdtemp(path.join(tmpdir(),'hackathlone-test-'));await launch();});
 after(async()=>{if(processHandle?.exitCode===null)await stop();await rm(dir,{recursive:true,force:true});});
 test('serves dashboard, transparent output and bundled brand assets',async()=>{
-  for(const url of ['/','/overlay','/overlay?layer=lower','/studio.js','/overlay.js','/slate-time.js','/studio.css','/overlay.css','/assets/logo.svg','/assets/logo-light.svg','/assets/icon.svg','/assets/icon-light.svg','/assets/spaceapps.svg','/assets/spaceapps-light.svg','/assets/partners/angola-ggpen.png','/assets/partners/uk-space-agency.png','/assets/font.woff2','/assets/overpass.woff2'])assert.equal((await fetch(base+url)).status,200,url);
+  for(const url of ['/','/overlay','/overlay?layer=lower','/studio.js','/overlay.js','/slate-time.js','/order.js','/studio.css','/overlay.css','/assets/logo.svg','/assets/logo-light.svg','/assets/icon.svg','/assets/icon-light.svg','/assets/spaceapps.svg','/assets/spaceapps-light.svg','/assets/partners/angola-ggpen.png','/assets/partners/uk-space-agency.png','/assets/font.woff2','/assets/overpass.woff2'])assert.equal((await fetch(base+url)).status,200,url);
   assert.equal((await fetch(base+'/unknown')).status,404);
 });
 test('includes the complete NASA Space Apps agency partner roster',async()=>{
@@ -43,6 +43,14 @@ test('partial changes preserve other controls and clamp invalid settings',async(
   assert.equal(state.event.title,'Integration Test');assert.equal(state.settings.safe,160);assert.equal(state.settings.speed,12);assert.equal(state.settings.accent,'#0042a6');
   const safeLogo=await put({partners:[{name:'Test',logo:'/assets/partners/angola-ggpen.png'}]});assert.equal(safeLogo.partners[0].logo,'/assets/partners/angola-ggpen.png');
   const logos=await put({partners:[{name:'Test',logo:'javascript:alert(1)'}]});assert.equal(logos.partners[0].logo,'');
+});
+test('keeps the team on stage inside the team list',async()=>{
+  const start=await put({teams:['A','B','C'],currentTeam:1,layers:{...(await get()).layers,order:true}});
+  assert.equal(start.currentTeam,1);assert.equal(start.layers.order,true);
+  for(const bad of [5,-1,1.5,'1'])assert.equal((await put({teams:['A','B','C'],currentTeam:bad})).currentTeam,null,String(bad));
+  await put({teams:['A','B','C'],currentTeam:2});
+  assert.equal((await put({teams:['A']})).currentTeam,null);
+  assert.equal((await put({currentTeam:null})).currentTeam,null);
 });
 test('rejects foreign origins and malformed configuration',async()=>{
   assert.equal((await fetch(base+'/api/state',{method:'POST',headers:{'Content-Type':'application/json',Origin:'https://example.com'},body:'{}'})).status,403);

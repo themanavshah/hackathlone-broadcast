@@ -25,6 +25,7 @@ Set the `PORT` environment variable to use another port. Generated OBS URLs auto
 - **Countdown:** enter a duration in minutes and press **Start**. Pause/Resume preserves the remaining time; Reset restores the original duration.
 - **Partner strip:** upload PNG, JPEG or WebP logos up to 1 MB and reorder them with the arrow control. The sequence is duplicated for a seamless broadcast loop.
 - **Agenda:** select the current item and take the agenda live. The overlay shows that item plus the next two.
+- **Presentation order:** the Teams tab runs the order teams present in. **Next team** puts the next team on stage and shows its name; **Back** and **Undo** fix a wrong press. The arrows reorder the teams still waiting, **Bring on stage** puts any team on now without skipping the others, and **Change the list** takes the final list, one team per line. The overlay shows the order down the left, like a race timing tower.
 - **Announcement ticker:** edit its label and message, update it, then use the separate layer toggle.
 - **Esc / Hide all:** clears every layer and returns to the transparent live scene. The timer keeps counting until paused.
 - **Settings:** edit event copy, choose an official brand accent, set safe margins and marquee speed, and enable preview-only safe-area guides.
@@ -42,6 +43,7 @@ The combined `/overlay` source contains every layer. Use these URLs only when in
 | `/overlay?layer=ticker` | Announcement ticker |
 | `/overlay?layer=timer` | Countdown |
 | `/overlay?layer=agenda` | Agenda |
+| `/overlay?layer=order` | Presentation order |
 | `/overlay?layer=slate` | Full-screen slates |
 
 All clients share one server-side state. Do not use the combined source and the same individual layer together, or the graphic will appear twice.

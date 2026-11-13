@@ -9,8 +9,10 @@ export const defaults = {
   teams: [
     '0000', '<3333333', 'AERONASC', 'Alice In Astral-land', 'ARK', 'AstroNiche', 'athena 66', 'Azimuth Zero', 'BOLL', 'ChaiScript', 'Erevna', 'Flame Nebula', '_Fly to Sky_', 'Glorpo Florben', 'HackedAthlone', 'HackSlop', 'Hand of God', 'KIPISH', 'Lame Timpala', 'Last Commit', 'LGTM!', 'National Agricultural Spud Administration', 'Ógra FF', 'Orbit nine', 'SEDS', 'SETU EGAT', 'Space Spacebar', 'Team Beacon', 'The Cosmic Cartographers', 'The Dark Triad', 'The Music Makers', 'tpot', 'Trinners', 'UCD Space Team', 'Venture Studios', 'VIGO', 'Vitality-TUD', 'Wheel of Carcosa'
   ],
+  // The team on stage in the presentation order (an index into teams), or null before the first team.
+  currentTeam: null,
   lowerPosition: 'left',
-  layers: { bug: true, lower: false, partners: false, ticker: false, timer: false, agenda: false },
+  layers: { bug: true, lower: false, partners: false, ticker: false, timer: false, agenda: false, order: false },
   scene: 'live',
   announcement: { label: 'LIVE', text: 'Welcome to HackAthlone 2026, live from TUS Athlone ∙ Schedule and challenges at hackathlone.com' },
   timer: { duration: 600, remaining: 600, endAt: null, label: 'WE’RE BACK IN' },

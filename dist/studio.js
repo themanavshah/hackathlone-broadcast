@@ -1,7 +1,8 @@
+import { nextIndex, previousIndex, status, movable, moveTeam, bringOnStage, keepOnStage } from './order.js';
 const $ = id => document.getElementById(id);
 const esc = value => String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let state, toastTimer, connected=false, writeQueue=Promise.resolve(), draftDirty=false;
-const layerNames={bug:['◈','Event mark','Logo in the top corner'],lower:['▰','Guest lower third','Name, role and organisation'],partners:['⇄','Partner strip','Seamless full-width logo loop'],agenda:['▤','Agenda','The next three items'],timer:['◷','Countdown','Broadcast timer']};
+const layerNames={bug:['◈','Event mark','Logo in the top corner'],lower:['▰','Guest lower third','Name, role and organisation'],partners:['⇄','Partner strip','Seamless full-width logo loop'],agenda:['▤','Agenda','The next three items'],timer:['◷','Countdown','Broadcast timer'],order:['≡','Presentation order','Teams in presenting order']};
 $('layer-toggles').innerHTML=Object.entries(layerNames).map(([key,[icon,title,detail]])=>`<div class="widget-row"><span class="widget-icon">${icon}</span><div><b>${title}</b><small>${detail}</small></div><button class="toggle" data-layer="${key}" aria-label="${title}" aria-pressed="false"></button></div>`).join('');
 function toast(message){$('toast').textContent=message;$('toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('show'),3000);}
 function setConnection(value){connected=value;$('connection').classList.toggle('offline',!value);$('connection').innerHTML=`<i></i> ${value?'Server connected':'Offline · reconnecting'}`;}
@@ -18,10 +19,26 @@ function update(change,message){
 }
 function fill(form,data){for(const [key,value] of Object.entries(data)){const el=form.elements.namedItem(key);if(el&&document.activeElement!==el){if(el.type==='checkbox')el.checked=value;else el.value=value;}}}
 function draft(){const f=$('guest-form');$('draft-name').textContent=f.elements.name.value || 'Guest name';$('draft-meta').textContent=[f.elements.role.value,f.elements.organization.value].filter(Boolean).join(' / ');}
-const tabInfo={studio:['Ready for <span>broadcast</span>','Names, moments and people. Control exactly what your audience sees.'],guests:['People of the <span>mission</span>','Prepare guest cards ahead of time, then put the right person on screen at the right moment.'],teams:['Teams on <span>stage</span>','Choose a team to show its name in the bottom-centre on-stage graphic.'],schedule:['The flight <span>plan</span>','Event timing, upcoming sessions and important deadlines.'],partners:['Built <span>together</span>','Organisers, partners and communities making the mission possible.'],settings:['Your broadcast <span>system</span>','OBS sources, brand graphics and production backups.']};
+const tabInfo={studio:['Ready for <span>broadcast</span>','Names, moments and people. Control exactly what your audience sees.'],guests:['People of the <span>mission</span>','Prepare guest cards ahead of time, then put the right person on screen at the right moment.'],teams:['Teams on <span>stage</span>','Run the presentation order. Next team puts the next team on stage and shows its name.'],schedule:['The flight <span>plan</span>','Event timing, upcoming sessions and important deadlines.'],partners:['Built <span>together</span>','Organisers, partners and communities making the mission possible.'],settings:['Your broadcast <span>system</span>','OBS sources, brand graphics and production backups.']};
 function tab(name){document.querySelectorAll('.tab').forEach(el=>el.classList.toggle('active',el.id==='tab-'+name));document.querySelectorAll('.nav').forEach(el=>el.classList.toggle('active',el.dataset.tab===name));$('page-title').innerHTML=tabInfo[name][0];$('page-description').textContent=tabInfo[name][1];$('breadcrumb').textContent=document.querySelector(`[data-tab="${name}"]`).textContent.trim();}
 document.querySelectorAll('[data-tab]').forEach(el=>el.onclick=()=>tab(el.dataset.tab));
 let libraryKey='';
+// Presentation order. Every change remembers the list as it was, so Undo can put it back.
+const orderHistory=[];
+const onStage=(s,name)=>({guest:{name,role:'Presenting team',organization:'NASA Space Apps Challenge'},lowerPosition:'center',layers:{...s.layers,lower:true},lowerHideAt:s.settings.autoHide?Date.now()+s.settings.autoHide*1000:null});
+function orderUpdate(change,message){let before,changed=false;return update(s=>{before={teams:[...s.teams],currentTeam:s.currentTeam??null};const patch=change(s);changed=Boolean(patch);return patch||{};},message).then(s=>{if(changed){orderHistory.push(before);if(orderHistory.length>50)orderHistory.shift();}renderOrderControls();return s;});}
+function renderOrderControls(){
+  if(!state)return;
+  const n=state.teams.length,cur=state.currentTeam??null,next=nextIndex(cur,n),label=i=>`${String(i+1).padStart(2,'0')} ∙ ${state.teams[i]}`;
+  $('order-now').textContent=cur===null?'Nobody yet':label(cur);
+  $('order-next-name').textContent=next===null?(n?'The last team is on stage':'No teams yet'):label(next);
+  $('order-next').disabled=next===null||Date.now()<orderBusyUntil;
+  $('order-back').disabled=cur===null||Date.now()<orderBusyUntil;
+  $('order-undo').disabled=!orderHistory.length;
+}
+// Next and Back ignore a second press for a moment, so a double click moves only one team.
+let orderBusyUntil=0;
+function orderStep(change,message){if(Date.now()<orderBusyUntil)return;orderBusyUntil=Date.now()+1200;setTimeout(renderOrderControls,1250);renderOrderControls();orderUpdate(change,message).catch(()=>{});}
 function render(){
   if(!state)return;
   document.documentElement.style.setProperty('--accent',state.settings.accent);
@@ -33,14 +50,16 @@ function render(){
   if(document.activeElement!==$('auto-hide'))$('auto-hide').value=state.settings.autoHide;
   fill($('timer-form'),{label:state.timer.label});
   $('pause-timer').textContent=state.timer.endAt?'Ⅱ Pause':'▶ Resume';
-  const key=JSON.stringify([state.guests,state.teams,state.schedule,state.activeSchedule,state.partners]);
+  const key=JSON.stringify([state.guests,state.teams,state.currentTeam,state.schedule,state.activeSchedule,state.partners]);
   if(key!==libraryKey){
     $('guest-list').innerHTML=state.guests.map((g,i)=>`<div class="list-item"><div class="avatar">${esc(g.name.charAt(0))}</div><div class="info"><b>${esc(g.name)}</b><small>${esc([g.role,g.organization].filter(Boolean).join(' / '))}</small></div><button class="secondary" data-load-guest="${i}">Prepare ↗</button><button class="icon-button" data-delete-guest="${i}" aria-label="Delete guest">×</button></div>`).join('')||'<div class="empty">Add your first guest</div>';
     $('schedule-list').innerHTML=state.schedule.map((p,i)=>`<div class="list-item ${i===state.activeSchedule?'selected':''}"><div class="info"><small>${esc(p.day)} / ${esc(p.time)}</small><b>${esc(p.title)}</b><small>${esc(p.detail)}</small></div><button class="secondary" data-select-schedule="${i}">${i===state.activeSchedule?'Selected':'Select'}</button><button class="icon-button" data-delete-schedule="${i}" aria-label="Delete item">×</button></div>`).join('')||'<div class="empty">The run of show is empty</div>';
     $('partner-list').innerHTML=state.partners.map((p,i)=>`<div class="list-item">${p.logo?`<img src="${esc(p.logo)}" alt="${esc(p.name)}">`:''}<div class="info"><b>${esc(p.name)}</b><small>${esc(p.label)}</small></div><button class="icon-button" data-move-partner="${i}" ${i===0?'disabled':''} aria-label="Move organisation up">↑</button><button class="icon-button" data-delete-partner="${i}" aria-label="Delete organisation">×</button></div>`).join('')||'<div class="empty">Add an organiser or partner</div>';
-    $('team-list').innerHTML=state.teams.map((team,i)=>`<article class="team-card"><div><span>TEAM ${String(i+1).padStart(2,'0')}</span><h3>${esc(team)}</h3></div><button class="accent" data-team-index="${i}">↗ Bring on stage</button></article>`).join('')||'<div class="empty">No teams in the saved event page</div>';
+    const cur=state.currentTeam??null,stateLabel={done:'Done',now:'On stage',next:'Next',waiting:''};
+    $('team-list').innerHTML=state.teams.map((team,i)=>{const st=status(i,cur),m=movable(i,cur,state.teams.length);return `<li class="order-item ${st}"><span class="order-num">${String(i+1).padStart(2,'0')}</span><b class="order-name">${esc(team)}</b>${stateLabel[st]?`<span class="order-state">${stateLabel[st]}</span>`:''}<span class="order-buttons"><button class="icon-button" data-team-up="${i}" ${m.up?'':'disabled'} aria-label="Move ${esc(team)} up">↑</button><button class="icon-button" data-team-down="${i}" ${m.down?'':'disabled'} aria-label="Move ${esc(team)} down">↓</button><button class="secondary" data-team-index="${i}">${st==='now'?'Show name again':'↗ Bring on stage'}</button></span></li>`;}).join('')||'<li class="empty">No teams yet. Add them under “Change the list”.</li>';
     libraryKey=key;
   }
+  renderOrderControls();
   tick();
 }
 async function loadState(){
@@ -61,7 +80,8 @@ document.addEventListener('click',e=>{
     return {scene:b.dataset.scene,layers:{...s.layers,...timerLayer}};
   },'Scene switched').catch(()=>{});
   if(b.dataset.loadGuest!==undefined){fill($('guest-form'),state.guests[+b.dataset.loadGuest]);draftDirty=true;draft();tab('studio');toast('Guest prepared. Press “Take live” when ready.');}
-  if(b.dataset.teamIndex!==undefined){const team=state.teams[+b.dataset.teamIndex];if(team)update(s=>({guest:{name:team,role:'Presenting team',organization:'NASA Space Apps Challenge'},lowerPosition:'center',layers:{...s.layers,lower:true},lowerHideAt:s.settings.autoHide?Date.now()+s.settings.autoHide*1000:null}),'Team is on stage').catch(()=>{});}
+  if(b.dataset.teamIndex!==undefined){const i=+b.dataset.teamIndex,name=state.teams[i];if(name!==undefined)orderUpdate(s=>{if(s.teams[i]!==name)throw new Error('The list just changed. Try again.');const r=bringOnStage(s.teams,s.currentTeam??null,i);return{teams:r.teams,currentTeam:r.current,...onStage(s,name)};},'Team is on stage').catch(()=>{});}
+  if(b.dataset.teamUp!==undefined||b.dataset.teamDown!==undefined){const up=b.dataset.teamUp!==undefined,i=+(up?b.dataset.teamUp:b.dataset.teamDown),name=state.teams[i];orderUpdate(s=>{if(s.teams[i]!==name)throw new Error('The list just changed. Try again.');const cur=s.currentTeam??null,m=movable(i,cur,s.teams.length);if(!(up?m.up:m.down))return null;const r=moveTeam(s.teams,cur,i,i+(up?-1:1));return{teams:r.teams,currentTeam:r.current};}).catch(()=>{});}
   for(const [data,field] of [['deleteGuest','guests'],['deletePartner','partners'],['deleteSchedule','schedule']])if(b.dataset[data]!==undefined)update(s=>({[field]:s[field].filter((_,i)=>i!==+b.dataset[data]),...(field==='schedule'?{activeSchedule:Math.max(0,s.activeSchedule-(+b.dataset[data]<s.activeSchedule?1:0))}:{})}),'Card deleted').catch(()=>{});
   if(b.dataset.selectSchedule!==undefined)update({activeSchedule:+b.dataset.selectSchedule}).catch(()=>{});
   if(b.dataset.movePartner!==undefined)update(s=>{const p=[...s.partners],i=+b.dataset.movePartner;[p[i-1],p[i]]=[p[i],p[i-1]];return{partners:p};}).catch(()=>{});
@@ -78,6 +98,11 @@ $('timer-form').onsubmit=e=>{e.preventDefault();const data=new FormData(e.target
 $('pause-timer').onclick=()=>update(s=>({timer:s.timer.endAt?{...s.timer,remaining:Math.max(0,Math.ceil((s.timer.endAt-Date.now())/1000)),endAt:null}:{...s.timer,endAt:Date.now()+s.timer.remaining*1000}})).catch(()=>{});
 $('reset-timer').onclick=()=>update(s=>({timer:{...s.timer,remaining:s.timer.duration,endAt:null}}),'Countdown reset').catch(()=>{});
 $('schedule-form').onsubmit=async e=>{e.preventDefault();const item=Object.fromEntries(new FormData(e.target));try{await update(s=>({schedule:[...s.schedule,item]}),'Item added');e.target.reset();}catch{}};
+$('order-next').onclick=()=>orderStep(s=>{const i=nextIndex(s.currentTeam??null,s.teams.length);return i===null?null:{currentTeam:i,...onStage(s,s.teams[i])};},'Next team is on stage');
+$('order-back').onclick=()=>orderStep(s=>{const cur=s.currentTeam??null;if(cur===null)return null;const showing=s.layers.lower&&s.lowerPosition==='center';return{currentTeam:previousIndex(cur),...(showing?{layers:{...s.layers,lower:false},lowerHideAt:null}:{})};},'Back one team');
+$('order-undo').onclick=()=>{const last=orderHistory.pop();if(!last)return;renderOrderControls();update(last,'Undone').catch(()=>{orderHistory.push(last);renderOrderControls();});};
+$('order-edit').ontoggle=()=>{if($('order-edit').open&&state)$('order-text').value=state.teams.join('\n');};
+$('order-save').onclick=()=>{if(!state)return;const names=[...new Set($('order-text').value.split('\n').map(t=>t.trim()).filter(Boolean))].slice(0,100);const removed=state.teams.filter(t=>!names.includes(t));if(removed.length&&!confirm(`Take ${removed.length} team${removed.length>1?'s':''} off the list?\n\n${removed.slice(0,15).join('\n')}${removed.length>15?'\n…':''}`))return;orderUpdate(s=>({teams:names,currentTeam:keepOnStage(s.teams,s.currentTeam??null,names)}),`List saved: ${names.length} teams`).then(()=>{$('order-edit').open=false;}).catch(()=>{});};
 $('show-agenda').onclick=()=>update(s=>({layers:{...s.layers,agenda:true}}),'Agenda is live').catch(()=>{});
 $('show-partners').onclick=()=>update(s=>({layers:{...s.layers,partners:true}}),'Partner strip is live').catch(()=>{});
 $('partner-form').onsubmit=async e=>{
@@ -87,9 +112,9 @@ $('partner-form').onsubmit=async e=>{
 };
 $('event-form').onsubmit=e=>{e.preventDefault();update({event:Object.fromEntries(new FormData(e.target))},'Event saved').catch(()=>{});};
 $('settings-form').onsubmit=e=>{e.preventDefault();const f=new FormData(e.target);update(s=>({settings:{...s.settings,accent:f.get('accent'),safe:+f.get('safe'),speed:+f.get('speed'),guides:f.has('guides')}}),'Graphics settings applied').catch(()=>{});};
-$('obs-links').innerHTML=[['Combined output',''],['Guest lower third','lower'],['Partner strip','partners'],['Event mark','bug'],['Announcement ticker','ticker'],['Countdown','timer'],['Agenda','agenda'],['Full-screen slates','slate']].map(([title,layer])=>{const url=location.origin+'/overlay'+(layer?'?layer='+layer:'');return`<div class="obs-link"><span>${title}</span><div><input readonly value="${esc(url)}" aria-label="${title} URL"><button class="secondary" data-copy="${esc(url)}">Copy</button></div></div>`;}).join('');
+$('obs-links').innerHTML=[['Combined output',''],['Guest lower third','lower'],['Partner strip','partners'],['Event mark','bug'],['Announcement ticker','ticker'],['Countdown','timer'],['Agenda','agenda'],['Presentation order','order'],['Full-screen slates','slate']].map(([title,layer])=>{const url=location.origin+'/overlay'+(layer?'?layer='+layer:'');return`<div class="obs-link"><span>${title}</span><div><input readonly value="${esc(url)}" aria-label="${title} URL"><button class="secondary" data-copy="${esc(url)}">Copy</button></div></div>`;}).join('');
 $('obs-links').onclick=async e=>{const b=e.target.closest('[data-copy]');if(!b)return;try{await navigator.clipboard.writeText(b.dataset.copy);toast('URL copied');}catch{b.previousElementSibling.select();toast('Selected — press Ctrl+C to copy');}};
 $('export').onclick=()=>{if(!state)return;const snapshot={...state,timer:{...state.timer,remaining:Math.max(0,Math.ceil(state.timer.endAt?(state.timer.endAt-Date.now())/1000:state.timer.remaining)),endAt:null}};const blob=new Blob([JSON.stringify(snapshot,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='hackathlone-broadcast.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
-$('import').onchange=async e=>{const file=e.target.files[0];if(!file)return;try{if(file.size>8000000)throw new Error('The file is too large');const data=JSON.parse(await file.text());if(!data.event||!data.layers||!Array.isArray(data.guests)||!Array.isArray(data.schedule)||!data.settings)throw new Error('This is not a HackAthlone broadcast backup');await update({...data,scene:'live',layers:{bug:false,lower:false,partners:false,ticker:false,timer:false,agenda:false},lowerHideAt:null,timer:{...data.timer,endAt:null}},'Backup restored');draftDirty=false;render();}catch(err){toast(err.message);}e.target.value='';};
+$('import').onchange=async e=>{const file=e.target.files[0];if(!file)return;try{if(file.size>8000000)throw new Error('The file is too large');const data=JSON.parse(await file.text());if(!data.event||!data.layers||!Array.isArray(data.guests)||!Array.isArray(data.schedule)||!data.settings)throw new Error('This is not a HackAthlone broadcast backup');await update({...data,scene:'live',layers:{bug:false,lower:false,partners:false,ticker:false,timer:false,agenda:false,order:false},lowerHideAt:null,timer:{...data.timer,endAt:null}},'Backup restored');draftDirty=false;render();}catch(err){toast(err.message);}e.target.value='';};
 function tick(){const d=new Date();$('clock').textContent=d.toLocaleTimeString('en-GB',{timeZone:'Europe/Dublin'})+' DUB';if(!state)return;const n=Math.max(0,Math.ceil(state.timer.endAt?(state.timer.endAt-Date.now())/1000:state.timer.remaining));$('timer-display').textContent=(n>=3600?String(Math.floor(n/3600)).padStart(2,'0')+':':'')+String(Math.floor(n/60)%60).padStart(2,'0')+':'+String(n%60).padStart(2,'0');}
 tick();setInterval(tick,250);
