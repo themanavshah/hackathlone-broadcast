@@ -2,7 +2,7 @@ import { showsSlateTime } from './slate-time.js';
 import { ROWS, towerWindow, rowKeys, status } from './order.js';
 const $ = id => document.getElementById(id);
 let state, partnerKey, scheduleKey, tickerKey, sceneKey, orderKey;
-const orderRows = new Map(), ROW = 46;
+const orderRows = new Map(), ROW = 28, BAND_GAP = 36, BAND_SPEED = 36;
 const CHECK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 const params = new URLSearchParams(location.search);
 const only = params.get('layer');
@@ -17,6 +17,25 @@ function time() {
   text('timer-value',output); text('slate-time',showsSlateTime(state) ? output : '');
   $('timer').classList.toggle('expired',seconds===0);
   if(state.lowerHideAt && Date.now()>=state.lowerHideAt)visibility('lower',false);
+}
+// A name wider than its row scrolls like a band: two copies loop seamlessly (canvas px, px per second).
+function fitName(row, name) {
+  const box = row.querySelector('.name');
+  let track = box.firstElementChild;
+  if (!track || track.dataset.name !== name) {
+    box.innerHTML = '<span class="name-track"><span class="t"></span></span>';
+    track = box.firstElementChild; track.dataset.name = name; track.firstElementChild.textContent = name;
+    box.classList.remove('scroll');
+  }
+  const cs = getComputedStyle(box), room = box.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+  const width = track.firstElementChild.offsetWidth, scroll = width > room + 0.5, shift = Math.ceil(width + BAND_GAP);
+  if (scroll === box.classList.contains('scroll') && (!scroll || track.dataset.shift === String(shift))) return;
+  box.classList.toggle('scroll', scroll);
+  track.dataset.shift = String(shift);
+  track.innerHTML = scroll ? '<span class="t"></span><span class="gap"></span><span class="t" aria-hidden="true"></span>' : '<span class="t"></span>';
+  track.querySelectorAll('.t').forEach((t) => { t.textContent = name; });
+  track.style.setProperty('--band-shift', scroll ? `-${shift}px` : '0px');
+  track.style.setProperty('--band-time', `${(shift / BAND_SPEED).toFixed(2)}s`);
 }
 // The presentation order. Rows are keyed by team, so a moved team slides to its new place.
 function renderOrder(s) {
@@ -37,8 +56,8 @@ function renderOrder(s) {
     const st = status(i, current);
     row.classList.remove('done', 'now', 'next', 'waiting'); row.classList.add(st);
     row.querySelector('.pos').textContent = String(i + 1).padStart(2, '0');
-    row.querySelector('.name').textContent = teams[i];
     row.querySelector('.mark').innerHTML = st === 'done' ? CHECK : st === 'now' ? 'ON STAGE' : st === 'next' ? 'NEXT' : '';
+    fitName(row, teams[i]);
     row.style.transform = `translateY(${(i - start) * ROW}px)`;
   });
   for (const [rowKey, row] of orderRows) if (!keys.includes(rowKey)) { row.remove(); orderRows.delete(rowKey); }
@@ -95,3 +114,5 @@ addEventListener('resize',resize);resize();
 const stream = new EventSource('/api/events');stream.onmessage=e=>render(JSON.parse(e.data));
 // OBS and the operator preview use the same server state, including after reload.
 setInterval(time,200);
+// Names are measured in the brand font, so measure again once it has loaded.
+document.fonts.ready.then(() => { for (const row of orderRows.values()) { const track = row.querySelector('.name-track'); if (track) fitName(row, track.dataset.name); } });
